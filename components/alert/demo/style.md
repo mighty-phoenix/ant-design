@@ -13,7 +13,7 @@ title:
 
 There are 4 types of Alert: `success`, `info`, `warning`, `error`.
 
-````jsx
+```tsx
 import { Alert } from 'antd';
 
 ReactDOM.render(
@@ -23,6 +23,12 @@ ReactDOM.render(
     <Alert message="Warning Text" type="warning" />
     <Alert message="Error Text" type="error" />
   </div>,
-  mountNode
+  mountNode,
 );
-````
+```
+
+<style>
+[data-theme="compact"] .code-box-demo .ant-alert {
+  margin-bottom: 8px;
+}
+</style>

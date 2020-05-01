@@ -1,8 +1,34 @@
 import React from 'react';
 import { mount } from 'enzyme';
 import Avatar from '..';
+import mountTest from '../../../tests/shared/mountTest';
+import rtlTest from '../../../tests/shared/rtlTest';
 
 describe('Avatar Render', () => {
+  mountTest(Avatar);
+  rtlTest(Avatar);
+
+  let originOffsetWidth;
+  beforeAll(() => {
+    // Mock offsetHeight
+    originOffsetWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, 'offsetWidth').get;
+    Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
+      get() {
+        if (this.className === 'ant-avatar-string') {
+          return 100;
+        }
+        return 80;
+      },
+    });
+  });
+
+  afterAll(() => {
+    // Restore Mock offsetHeight
+    Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
+      get: originOffsetWidth,
+    });
+  });
+
   it('Render long string correctly', () => {
     const wrapper = mount(<Avatar>TestString</Avatar>);
     const children = wrapper.find('.ant-avatar-string');
@@ -14,14 +40,18 @@ describe('Avatar Render', () => {
     global.document.body.appendChild(div);
 
     const wrapper = mount(<Avatar src="http://error.url">Fallback</Avatar>, { attachTo: div });
-    wrapper.instance().setScale = jest.fn(() => wrapper.instance().setState({ scale: 0.5 }));
-
+    wrapper.instance().setScale = jest.fn(() => {
+      if (wrapper.state().scale === 0.5) {
+        return;
+      }
+      wrapper.instance().setState({ scale: 0.5 });
+    });
     wrapper.find('img').simulate('error');
 
     const children = wrapper.find('.ant-avatar-string');
     expect(children.length).toBe(1);
     expect(children.text()).toBe('Fallback');
-    expect(wrapper.instance().setScale).toBeCalled();
+    expect(wrapper.instance().setScale).toHaveBeenCalled();
     expect(div.querySelector('.ant-avatar-string').style.transform).toContain('scale(0.5)');
 
     wrapper.detach();
@@ -89,5 +119,31 @@ describe('Avatar Render', () => {
     // cleanup
     wrapper.detach();
     global.document.body.removeChild(div);
+  });
+
+  it('should calculate scale of avatar children correctly', () => {
+    const wrapper = mount(<Avatar>Avatar</Avatar>);
+    expect(wrapper.state().scale).toBe(0.72);
+    Object.defineProperty(HTMLElement.prototype, 'offsetWidth', {
+      get() {
+        if (this.className === 'ant-avatar-string') {
+          return 100;
+        }
+        return 40;
+      },
+    });
+    wrapper.setProps({ children: 'xx' });
+    expect(wrapper.state().scale).toBe(0.32);
+  });
+
+  it('should warning when pass a string as icon props', () => {
+    const warnSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    mount(<Avatar size={64} icon="aa" />);
+    expect(warnSpy).not.toHaveBeenCalled();
+    mount(<Avatar size={64} icon="user" />);
+    expect(warnSpy).toHaveBeenCalledWith(
+      `Warning: [antd: Avatar] \`icon\` is using ReactNode instead of string naming in v4. Please check \`user\` at https://ant.design/components/icon`,
+    );
+    warnSpy.mockRestore();
   });
 });

@@ -1,9 +1,11 @@
 import * as React from 'react';
-import * as PropTypes from 'prop-types';
 import Animate from 'rc-animate';
+import omit from 'omit.js';
 import classNames from 'classnames';
 import ScrollNumber from './ScrollNumber';
+import { PresetColorTypes, PresetColorType, PresetStatusColorType } from '../_util/colors';
 import { ConfigConsumer, ConfigConsumerProps } from '../config-provider';
+import { LiteralUnion } from '../_util/type';
 
 export { ScrollNumberProps } from './ScrollNumber';
 
@@ -19,81 +21,58 @@ export interface BadgeProps {
   prefixCls?: string;
   scrollNumberPrefixCls?: string;
   className?: string;
-  status?: 'success' | 'processing' | 'default' | 'error' | 'warning';
-  text?: string;
+  status?: PresetStatusColorType;
+  color?: LiteralUnion<PresetColorType, string>;
+  text?: React.ReactNode;
   offset?: [number | string, number | string];
   title?: string;
 }
 
-export default class Badge extends React.Component<BadgeProps, any> {
-  static defaultProps = {
-    count: null,
-    showZero: false,
-    dot: false,
-    overflowCount: 99,
-  };
+function isPresetColor(color?: string): boolean {
+  return (PresetColorTypes as any[]).indexOf(color) !== -1;
+}
 
-  static propTypes = {
-    count: PropTypes.node,
-    showZero: PropTypes.bool,
-    dot: PropTypes.bool,
-    overflowCount: PropTypes.number,
-  };
-
-  getBadgeClassName(prefixCls: string) {
-    const { className, status, children } = this.props;
-    return classNames(className, prefixCls, {
-      [`${prefixCls}-status`]: !!status,
-      [`${prefixCls}-not-a-wrapper`]: !children,
-    }) as string;
-  }
-
-  isZero() {
-    const numberedDispayCount = this.getNumberedDispayCount();
-    return numberedDispayCount === '0' || numberedDispayCount === 0;
-  }
-
-  isDot() {
-    const { dot, status } = this.props;
-    const isZero = this.isZero();
-    return (dot && !isZero) || status;
-  }
-
-  isHidden() {
-    const { showZero } = this.props;
-    const displayCount = this.getDispayCount();
-    const isZero = this.isZero();
-    const isDot = this.isDot();
-    const isEmpty = displayCount === null || displayCount === undefined || displayCount === '';
-    return (isEmpty || (isZero && !showZero)) && !isDot;
-  }
-
-  getNumberedDispayCount() {
-    const { count, overflowCount } = this.props;
+const Badge: React.FC<BadgeProps> = props => {
+  const getNumberedDisplayCount = () => {
+    const { count, overflowCount } = props;
     const displayCount =
       (count as number) > (overflowCount as number) ? `${overflowCount}+` : count;
     return displayCount as string | number | null;
-  }
+  };
 
-  getDispayCount() {
-    const isDot = this.isDot();
+  const hasStatus = (): boolean => {
+    const { status, color } = props;
+    return !!status || !!color;
+  };
+
+  const isZero = () => {
+    const numberedDisplayCount = getNumberedDisplayCount();
+    return numberedDisplayCount === '0' || numberedDisplayCount === 0;
+  };
+
+  const isDot = () => {
+    const { dot } = props;
+    return (dot && !isZero()) || hasStatus();
+  };
+
+  const getDisplayCount = () => {
     // dot mode don't need count
-    if (isDot) {
+    if (isDot()) {
       return '';
     }
-    return this.getNumberedDispayCount();
-  }
+    return getNumberedDisplayCount();
+  };
 
-  getScrollNumberTitle() {
-    const { title, count } = this.props;
+  const getScrollNumberTitle = () => {
+    const { title, count } = props;
     if (title) {
       return title;
     }
     return typeof count === 'string' || typeof count === 'number' ? count : undefined;
-  }
+  };
 
-  getStyleWithOffset() {
-    const { offset, style } = this.props;
+  const getStyleWithOffset = () => {
+    const { offset, style } = props;
     return offset
       ? {
           right: -parseInt(offset[0] as string, 10),
@@ -101,42 +80,65 @@ export default class Badge extends React.Component<BadgeProps, any> {
           ...style,
         }
       : style;
-  }
+  };
 
-  renderStatusText(prefixCls: string) {
-    const { text } = this.props;
-    const hidden = this.isHidden();
+  const getBadgeClassName = (prefixCls: string, direction: string = 'ltr') => {
+    const { className, children } = props;
+    return classNames(className, prefixCls, {
+      [`${prefixCls}-status`]: hasStatus(),
+      [`${prefixCls}-not-a-wrapper`]: !children,
+      [`${prefixCls}-rtl`]: direction === 'rtl',
+    }) as string;
+  };
+
+  const isHidden = () => {
+    const { showZero } = props;
+    const displayCount = getDisplayCount();
+    const isEmpty = displayCount === null || displayCount === undefined || displayCount === '';
+    return (isEmpty || (isZero() && !showZero)) && !isDot();
+  };
+
+  const renderStatusText = (prefixCls: string) => {
+    const { text } = props;
+    const hidden = isHidden();
     return hidden || !text ? null : <span className={`${prefixCls}-status-text`}>{text}</span>;
-  }
+  };
 
-  renderDispayComponent() {
-    const { count } = this.props;
+  const renderDisplayComponent = () => {
+    const { count } = props;
     const customNode = count as React.ReactElement<any>;
     if (!customNode || typeof customNode !== 'object') {
       return undefined;
     }
     return React.cloneElement(customNode, {
       style: {
-        ...this.getStyleWithOffset(),
+        ...getStyleWithOffset(),
         ...(customNode.props && customNode.props.style),
       },
     });
-  }
+  };
 
-  renderBadgeNumber(prefixCls: string, scrollNumberPrefixCls: string) {
-    const { count, status } = this.props;
+  const renderBadgeNumber = (prefixCls: string, scrollNumberPrefixCls: string) => {
+    const { status, count, color } = props;
 
-    const displayCount = this.getDispayCount();
-    const isDot = this.isDot();
-    const hidden = this.isHidden();
+    const displayCount = getDisplayCount();
+    const dot = isDot();
+    const hidden = isHidden();
 
     const scrollNumberCls = classNames({
-      [`${prefixCls}-dot`]: isDot,
-      [`${prefixCls}-count`]: !isDot,
+      [`${prefixCls}-dot`]: dot,
+      [`${prefixCls}-count`]: !dot,
       [`${prefixCls}-multiple-words`]:
-        !isDot && count && count.toString && count.toString().length > 1,
+        !dot && count && count.toString && count.toString().length > 1,
       [`${prefixCls}-status-${status}`]: !!status,
+      [`${prefixCls}-status-${color}`]: isPresetColor(color),
     });
+
+    let statusStyle: React.CSSProperties | undefined = getStyleWithOffset();
+    if (color && !isPresetColor(color)) {
+      statusStyle = statusStyle || {};
+      statusStyle.background = color;
+    }
 
     return hidden ? null : (
       <ScrollNumber
@@ -144,59 +146,71 @@ export default class Badge extends React.Component<BadgeProps, any> {
         data-show={!hidden}
         className={scrollNumberCls}
         count={displayCount}
-        displayComponent={this.renderDispayComponent()} // <Badge status="success" count={<Icon type="xxx" />}></Badge>
-        title={this.getScrollNumberTitle()}
-        style={this.getStyleWithOffset()}
+        displayComponent={renderDisplayComponent()} // <Badge status="success" count={<Icon type="xxx" />}></Badge>
+        title={getScrollNumberTitle()}
+        style={statusStyle}
         key="scrollNumber"
       />
     );
-  }
+  };
 
-  renderBadge = ({ getPrefixCls }: ConfigConsumerProps) => {
+  const renderBadge = ({ getPrefixCls, direction }: ConfigConsumerProps) => {
     const {
-      count,
-      showZero,
       prefixCls: customizePrefixCls,
       scrollNumberPrefixCls: customizeScrollNumberPrefixCls,
-      overflowCount,
-      className,
-      style,
       children,
-      dot,
       status,
       text,
-      offset,
-      title,
+      color,
       ...restProps
-    } = this.props;
+    } = props;
+    const omitArr = [
+      'count',
+      'showZero',
+      'overflowCount',
+      'className',
+      'style',
+      'dot',
+      'offset',
+      'title',
+    ];
 
     const prefixCls = getPrefixCls('badge', customizePrefixCls);
     const scrollNumberPrefixCls = getPrefixCls('scroll-number', customizeScrollNumberPrefixCls);
 
-    const scrollNumber = this.renderBadgeNumber(prefixCls, scrollNumberPrefixCls);
-    const statusText = this.renderStatusText(prefixCls);
+    const scrollNumber = renderBadgeNumber(prefixCls, scrollNumberPrefixCls);
+    const statusText = renderStatusText(prefixCls);
 
     const statusCls = classNames({
-      [`${prefixCls}-status-dot`]: !!status,
+      [`${prefixCls}-status-dot`]: hasStatus(),
       [`${prefixCls}-status-${status}`]: !!status,
+      [`${prefixCls}-status-${color}`]: isPresetColor(color),
     });
+    const statusStyle: React.CSSProperties = {};
+    if (color && !isPresetColor(color)) {
+      statusStyle.background = color;
+    }
 
     // <Badge status="success" />
-    if (!children && status) {
+    if (!children && hasStatus()) {
+      const styleWithOffset = getStyleWithOffset();
+      const statusTextColor = styleWithOffset && styleWithOffset.color;
       return (
         <span
-          {...restProps}
-          className={this.getBadgeClassName(prefixCls)}
-          style={this.getStyleWithOffset()}
+          {...omit(restProps, omitArr)}
+          className={getBadgeClassName(prefixCls, direction)}
+          style={styleWithOffset}
         >
-          <span className={statusCls} />
-          <span className={`${prefixCls}-status-text`}>{text}</span>
+          <span className={statusCls} style={statusStyle} />
+          <span style={{ color: statusTextColor }} className={`${prefixCls}-status-text`}>
+            {text}
+          </span>
         </span>
       );
     }
 
     return (
-      <span {...restProps} className={this.getBadgeClassName(prefixCls)}>
+      <span {...omit(restProps, omitArr)} className={getBadgeClassName(prefixCls, direction)}>
         {children}
         <Animate
           component=""
@@ -211,7 +225,14 @@ export default class Badge extends React.Component<BadgeProps, any> {
     );
   };
 
-  render() {
-    return <ConfigConsumer>{this.renderBadge}</ConfigConsumer>;
-  }
-}
+  return <ConfigConsumer>{renderBadge}</ConfigConsumer>;
+};
+
+Badge.defaultProps = {
+  count: null,
+  showZero: false,
+  dot: false,
+  overflowCount: 99,
+};
+
+export default Badge;

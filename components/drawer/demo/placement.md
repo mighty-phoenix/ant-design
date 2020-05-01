@@ -11,10 +11,10 @@ title:
 
 ## en-US
 
-Basic drawer.
+The Drawer can appear from any edge of the screen.
 
 ```jsx
-import { Drawer, Button, Radio } from 'antd';
+import { Drawer, Button, Radio, Space } from 'antd';
 
 const RadioGroup = Radio.Group;
 
@@ -33,28 +33,26 @@ class App extends React.Component {
     });
   };
 
-  onChange = (e) => {
+  onChange = e => {
     this.setState({
       placement: e.target.value,
     });
-  }
+  };
 
   render() {
     return (
       <div>
-        <RadioGroup
-          style={{ marginRight: 8 }}
-          defaultValue={this.state.placement}
-          onChange={this.onChange}
-        >
-          <Radio value="top">top</Radio>
-          <Radio value="right">right</Radio>
-          <Radio value="bottom">bottom</Radio>
-          <Radio value="left">left</Radio>
-        </RadioGroup>
-        <Button type="primary" onClick={this.showDrawer}>
-          Open
-        </Button>
+        <Space>
+          <RadioGroup defaultValue={this.state.placement} onChange={this.onChange}>
+            <Radio value="top">top</Radio>
+            <Radio value="right">right</Radio>
+            <Radio value="bottom">bottom</Radio>
+            <Radio value="left">left</Radio>
+          </RadioGroup>
+          <Button type="primary" onClick={this.showDrawer}>
+            Open
+          </Button>
+        </Space>
         <Drawer
           title="Basic Drawer"
           placement={this.state.placement}

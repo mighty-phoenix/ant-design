@@ -1,5 +1,4 @@
 import * as React from 'react';
-import * as PropTypes from 'prop-types';
 import classNames from 'classnames';
 import omit from 'omit.js';
 import debounce from 'lodash/debounce';
@@ -7,8 +6,8 @@ import { ConfigConsumer, ConfigConsumerProps } from '../config-provider';
 import { tuple } from '../_util/type';
 
 const SpinSizes = tuple('small', 'default', 'large');
-export type SpinSize = (typeof SpinSizes)[number];
-export type SpinIndicator = React.ReactElement<any>;
+export type SpinSize = typeof SpinSizes[number];
+export type SpinIndicator = React.ReactElement<HTMLElement>;
 
 export interface SpinProps {
   prefixCls?: string;
@@ -33,9 +32,15 @@ let defaultIndicator: React.ReactNode = null;
 function renderIndicator(prefixCls: string, props: SpinProps): React.ReactNode {
   const { indicator } = props;
   const dotClassName = `${prefixCls}-dot`;
+
+  // should not be render default indicator when indicator value is null
+  if (indicator === null) {
+    return null;
+  }
+
   if (React.isValidElement(indicator)) {
-    return React.cloneElement(indicator as SpinIndicator, {
-      className: classNames((indicator as SpinIndicator).props.className, dotClassName),
+    return React.cloneElement(indicator, {
+      className: classNames(indicator.props.className, dotClassName),
     });
   }
 
@@ -47,10 +52,10 @@ function renderIndicator(prefixCls: string, props: SpinProps): React.ReactNode {
 
   return (
     <span className={classNames(dotClassName, `${prefixCls}-dot-spin`)}>
-      <i />
-      <i />
-      <i />
-      <i />
+      <i className={`${prefixCls}-dot-item`} />
+      <i className={`${prefixCls}-dot-item`} />
+      <i className={`${prefixCls}-dot-item`} />
+      <i className={`${prefixCls}-dot-item`} />
     </span>
   );
 }
@@ -64,15 +69,6 @@ class Spin extends React.Component<SpinProps, SpinState> {
     spinning: true,
     size: 'default' as SpinSize,
     wrapperClassName: '',
-  };
-
-  static propTypes = {
-    prefixCls: PropTypes.string,
-    className: PropTypes.string,
-    spinning: PropTypes.bool,
-    size: PropTypes.oneOf(SpinSizes),
-    wrapperClassName: PropTypes.string,
-    indicator: PropTypes.element,
   };
 
   static setDefaultIndicator(indicator: React.ReactNode) {
@@ -93,17 +89,6 @@ class Spin extends React.Component<SpinProps, SpinState> {
     this.debouncifyUpdateSpinning(props);
   }
 
-  isNestedPattern() {
-    return !!(this.props && this.props.children);
-  }
-
-  componentWillUnmount() {
-    const updateSpinning: any = this.updateSpinning;
-    if (updateSpinning && updateSpinning.cancel) {
-      updateSpinning.cancel();
-    }
-  }
-
   componentDidMount() {
     this.updateSpinning();
   }
@@ -113,9 +98,14 @@ class Spin extends React.Component<SpinProps, SpinState> {
     this.updateSpinning();
   }
 
+  componentWillUnmount() {
+    this.cancelExistingSpin();
+  }
+
   debouncifyUpdateSpinning = (props?: SpinProps) => {
     const { delay } = props || this.props;
     if (delay) {
+      this.cancelExistingSpin();
       this.updateSpinning = debounce(this.originalUpdateSpinning, delay);
     }
   };
@@ -128,7 +118,18 @@ class Spin extends React.Component<SpinProps, SpinState> {
     }
   };
 
-  renderSpin = ({ getPrefixCls }: ConfigConsumerProps) => {
+  cancelExistingSpin() {
+    const { updateSpinning } = this;
+    if (updateSpinning && (updateSpinning as any).cancel) {
+      (updateSpinning as any).cancel();
+    }
+  }
+
+  isNestedPattern() {
+    return !!(this.props && this.props.children);
+  }
+
+  renderSpin = ({ getPrefixCls, direction }: ConfigConsumerProps) => {
     const {
       prefixCls: customizePrefixCls,
       className,
@@ -148,6 +149,7 @@ class Spin extends React.Component<SpinProps, SpinState> {
         [`${prefixCls}-lg`]: size === 'large',
         [`${prefixCls}-spinning`]: spinning,
         [`${prefixCls}-show-text`]: !!tip,
+        [`${prefixCls}-rtl`]: direction === 'rtl',
       },
       className,
     );

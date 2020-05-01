@@ -1,5 +1,5 @@
 ---
-order: 3
+order: 4
 title: Use in create-react-app
 ---
 
@@ -13,10 +13,13 @@ Before all start, you may need install [yarn](https://github.com/yarnpkg/yarn/).
 
 ```bash
 $ yarn create react-app antd-demo
+
+# or
+
+$ npx create-react-app antd-demo
 ```
 
-The tool will create and initialize environment and dependencies automatically,
-please try config your proxy setting or use another npm registry if any network errors happen during it.
+The tool will create and initialize environment and dependencies automatically, please try config your proxy setting or use another npm registry if any network errors happen during it.
 
 Then we go inside `antd-demo` and start it.
 
@@ -56,19 +59,15 @@ $ yarn add antd
 Modify `src/App.js`, import Button component from `antd`.
 
 ```jsx
-import React, { Component } from 'react';
-import Button from 'antd/lib/button';
+import React from 'react';
+import { Button } from 'antd';
 import './App.css';
 
-class App extends Component {
-  render() {
-    return (
-      <div className="App">
-        <Button type="primary">Button</Button>
-      </div>
-    );
-  }
-}
+const App = () => (
+  <div className="App">
+    <Button type="primary">Button</Button>
+  </div>
+);
 
 export default App;
 ```
@@ -85,13 +84,13 @@ Add `antd/dist/antd.css` at the top of `src/App.css`.
 ...
 ```
 
-Ok, you should now see a blue primary button displayed on the page. Next you can choose any components of `antd` to develop your application. Visit other workflows of `create-react-app` at its [User Guide ](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md).
+Ok, you should now see a blue primary button displayed on the page. Next you can choose any components of `antd` to develop your application. Visit other workflows of `create-react-app` at its [User Guide](https://github.com/facebookincubator/create-react-app/blob/master/packages/react-scripts/template/README.md).
 
+We are successfully running antd components now, go build your own application!
 
 ## Advanced Guides
 
-We are successfully running antd components now but in the real world, there are still lots of problems about antd-demo.
-For instance, we actually import all styles of components in the project which may be a network performance issue.
+In the real world, there are still lots of problems about antd-demo. For instance, we actually import styles of all components in the project which may be a css bundle size issue (It is OK then if you don't care the gzipped 60kb css file size).
 
 Now we need to customize the default webpack config. We can achieve that by using [react-app-rewired](https://github.com/timarney/react-app-rewired) which is one of create-react-app's custom config solutions.
 
@@ -105,10 +104,10 @@ $ yarn add react-app-rewired customize-cra
 /* package.json */
 "scripts": {
 -   "start": "react-scripts start",
-+   "start": "react-app-rewired start",
 -   "build": "react-scripts build",
-+   "build": "react-app-rewired build",
 -   "test": "react-scripts test",
++   "start": "react-app-rewired start",
++   "build": "react-app-rewired build",
 +   "test": "react-app-rewired test",
 }
 ```
@@ -124,6 +123,8 @@ module.exports = function override(config, env) {
 
 ### Use babel-plugin-import
 
+> Note: antd support ES6 tree shaking by default even without this babel plugin for js part.
+
 [babel-plugin-import](https://github.com/ant-design/babel-plugin-import) is a babel plugin for importing components on demand ([How does it work?](/docs/react/getting-started#Import-on-Demand)). We are now trying to install it and modify `config-overrides.js`.
 
 ```bash
@@ -138,8 +139,7 @@ $ yarn add babel-plugin-import
 -   return config;
 - };
 + module.exports = override(
-+   fixBabelImports('import', {
-+     libraryName: 'antd',
++   fixBabelImports('antd', {
 +     libraryDirectory: 'es',
 +     style: 'css',
 +   }),
@@ -151,7 +151,7 @@ Remove the `@import '~antd/dist/antd.css';` statement added before because `babe
 ```diff
   // src/App.js
   import React, { Component } from 'react';
-- import Button from 'antd/lib/button';
+- import Button from 'antd/es/button';
 + import { Button } from 'antd';
   import './App.css';
 
@@ -183,26 +183,46 @@ $ yarn add less less-loader
 + const { override, fixBabelImports, addLessLoader } = require('customize-cra');
 
 module.exports = override(
-  fixBabelImports('import', {
-    libraryName: 'antd',
+  fixBabelImports('antd', {
     libraryDirectory: 'es',
 -   style: 'css',
 +   style: true,
   }),
 + addLessLoader({
-+   javascriptEnabled: true,
-+   modifyVars: { '@primary-color': '#1DA57A' },
++   lessOptions: { // If you are using less-loader@5 please spread the lessOptions to options directly
++     javascriptEnabled: true,
++     modifyVars: { '@primary-color': '#1DA57A' },
++   },
 + }),
 );
 ```
 
-We use `modifyVars` option of [less-loader](https://github.com/webpack/less-loader#less-options) here, you can see a green button rendered on the page after rebooting the start server.
+We use `modifyVars` option of [less-loader](https://github.com/webpack/less-loader#less-options) here. If you see a green button rendered on the page after rebooting the server, then the configuration was successful.
+
+We have built-in dark theme and compact theme in antd, you can reference to [Use dark or compact theme](/docs/react/customize-theme#Use-dark-or-compact-theme).
 
 > You could also try [craco](https://github.com/sharegate/craco) and [craco-antd](https://github.com/FormAPI/craco-antd) to customize create-react-app webpack config same as customize-cra does.
 
+> Note: It is recommended to use the latest version of `less`, or a minimum version greater than `3.0.1`.
+
+## Replace momentjs to Day.js
+
+You can use [antd-dayjs-webpack-plugin](https://github.com/ant-design/antd-dayjs-webpack-plugin) plugin to replace momentjs to Day.js to reduce bundle size dramatically.
+
+```bash
+$ yarn add antd-dayjs-webpack-plugin
+```
+
+```js
+const { override, addWebpackPlugin } = require('customize-cra');
+const AntdDayjsWebpackPlugin = require('antd-dayjs-webpack-plugin');
+
+module.exports = override(addWebpackPlugin(new AntdDayjsWebpackPlugin()));
+```
+
 ## eject
 
-You can also could try [yarn run eject](https://github.com/facebookincubator/create-react-app#converting-to-a-custom-setup)  for a custom setup of create-react-app, although you should dig into it by yourself.
+You can also eject your application using [yarn run eject](https://facebook.github.io/create-react-app/docs/available-scripts#npm-run-eject) for a custom setup of create-react-app, although you should dig into it by yourself.
 
 ## Source code and other boilerplates
 

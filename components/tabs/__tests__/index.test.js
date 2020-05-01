@@ -1,10 +1,23 @@
 import React from 'react';
 import { mount, render } from 'enzyme';
 import Tabs from '..';
+import mountTest from '../../../tests/shared/mountTest';
+import rtlTest from '../../../tests/shared/rtlTest';
 
 const { TabPane } = Tabs;
 
 describe('Tabs', () => {
+  mountTest(() => (
+    <Tabs>
+      <TabPane tab="xx" key="xx" />
+    </Tabs>
+  ));
+  rtlTest(() => (
+    <Tabs>
+      <TabPane tab="xx" key="xx" />
+    </Tabs>
+  ));
+
   describe('editable-card', () => {
     let handleEdit;
     let wrapper;
@@ -16,6 +29,9 @@ describe('Tabs', () => {
           <TabPane tab="foo" key="1">
             foo
           </TabPane>
+          {undefined}
+          {null}
+          {false}
         </Tabs>,
       );
     });
@@ -30,7 +46,11 @@ describe('Tabs', () => {
 
     it('remove card', () => {
       wrapper.find('.anticon-close').simulate('click');
-      expect(handleEdit).toBeCalledWith('1', 'remove');
+      expect(handleEdit).toHaveBeenCalledWith('1', 'remove');
+    });
+
+    it('validateElement', () => {
+      expect(wrapper.find('.ant-tabs-tab').length).toBe(1);
     });
   });
 

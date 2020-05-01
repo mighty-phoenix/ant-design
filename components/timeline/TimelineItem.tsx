@@ -1,5 +1,6 @@
 import * as React from 'react';
 import classNames from 'classnames';
+import omit from 'omit.js';
 import { ConfigConsumer, ConfigConsumerProps } from '../config-provider';
 
 export interface TimeLineItemProps {
@@ -8,10 +9,12 @@ export interface TimeLineItemProps {
   color?: string;
   dot?: React.ReactNode;
   pending?: boolean;
+  position?: string;
   style?: React.CSSProperties;
+  label?: React.ReactNode;
 }
 
-const TimelineItem: React.SFC<TimeLineItemProps> = props => (
+const TimelineItem: React.FC<TimeLineItemProps> = props => (
   <ConfigConsumer>
     {({ getPrefixCls }: ConfigConsumerProps) => {
       const {
@@ -21,6 +24,7 @@ const TimelineItem: React.SFC<TimeLineItemProps> = props => (
         children,
         pending,
         dot,
+        label,
         ...restProps
       } = props;
 
@@ -40,11 +44,12 @@ const TimelineItem: React.SFC<TimeLineItemProps> = props => (
       });
 
       return (
-        <li {...restProps} className={itemClassName}>
+        <li {...omit(restProps, ['position'])} className={itemClassName}>
+          {label && <div className={`${prefixCls}-item-label`}>{label}</div>}
           <div className={`${prefixCls}-item-tail`} />
           <div
             className={dotClassName}
-            style={{ borderColor: /blue|red|green/.test(color) ? undefined : color }}
+            style={{ borderColor: /blue|red|green|gray/.test(color) ? undefined : color }}
           >
             {dot}
           </div>
@@ -58,6 +63,7 @@ const TimelineItem: React.SFC<TimeLineItemProps> = props => (
 TimelineItem.defaultProps = {
   color: 'blue',
   pending: false,
+  position: '',
 };
 
 export default TimelineItem;
