@@ -338,9 +338,6 @@ class Cascader extends React.Component<CascaderProps, CascaderState> {
     // SPACE => https://github.com/ant-design/ant-design/issues/16871
     if (e.keyCode === KeyCode.BACKSPACE || e.keyCode === KeyCode.SPACE) {
       e.stopPropagation();
-    } else if (e.keyCode === 32) {
-      e.preventDefault();
-      (document.activeElement).click();
     }
   };
 
